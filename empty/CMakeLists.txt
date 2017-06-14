@@ -1,0 +1,16 @@
+cmake_minimum_required(VERSION 2.8)
+project(empty)
+set(CMAKE_PROJECT_NAME empty)
+set(CMAKE_BUILD_TYPE DEBUG)
+
+## for default arch ##
+set(ARCH x86_64)
+
+# aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR} SWNR_SRCS)
+add_definitions("-std=c++11")
+
+## hello
+add_executable(empty empty.cpp)
+target_link_libraries(empty opencl)
+
+# vim:fileencoding=UTF-8:ts=4:sw=4:sta:et:sts=4:ai

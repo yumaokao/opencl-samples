@@ -11,6 +11,6 @@ add_definitions("-std=c++11")
 
 ## hello
 add_executable(empty empty.cpp)
-target_link_libraries(empty opencl)
+target_link_libraries(empty OpenCL)
 
 # vim:fileencoding=UTF-8:ts=4:sw=4:sta:et:sts=4:ai

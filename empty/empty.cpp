@@ -1,22 +1,28 @@
 #define __CL_ENABLE_EXCEPTIONS
 
-#if defined(__APPLE__) || defined(__MACOSX)
-#include <OpenCL/cl.hpp>
-#else
-#include <CL/cl.hpp>
-#endif
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
+#include <string>
+#include <CL/cl.hpp>
+#include <boost/program_options.hpp>
 
-const char * helloStr = "__kernel void "
-                        "hello(void) "
+const char * emptyStr = "__kernel void "
+                        "empty(void) "
                         "{ "
                         "  "
                         "} ";
 
-int main(void)
+namespace po = boost::program_options;
+
+int main(int argc, char *argv[])
 {
+    po::options_description desc(std::string (argv[0]).append(" options"));
+    desc.add_options()
+        ("help", "produce help message")
+        ("platform", po::value<int>(), "platform id")
+    ;
+
     cl_int err = CL_SUCCESS;
     try {
         std::vector<cl::Platform> platforms;
@@ -30,11 +36,11 @@ int main(void)
 
         std::vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
 
-        cl::Program::Sources source(1, std::make_pair(helloStr,strlen(helloStr)));
+        cl::Program::Sources source(1, std::make_pair(emptyStr,strlen(emptyStr)));
         cl::Program program_ = cl::Program(context, source);
         program_.build(devices);
 
-        cl::Kernel kernel(program_, "hello", &err);
+        cl::Kernel kernel(program_, "empty", &err);
 
         cl::Event event;
         cl::CommandQueue queue(context, devices[0], 0, &err);

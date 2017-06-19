@@ -7,10 +7,10 @@
 #include <CL/cl.hpp>
 #include <boost/program_options.hpp>
 
-const char * emptyStr = "__kernel void "
-                        "empty(void) "
+const char * addoneStr = "__kernel void "
+                        "addone(global const int* A, global int* C) "
                         "{ "
-                        "  "
+                        "  C[get_global_id(0)] = A[get_global_id(0)] + 1;"
                         "} ";
 
 namespace po = boost::program_options;
@@ -52,19 +52,34 @@ int main(int argc, char *argv[])
         cl::Context context(CL_DEVICE_TYPE_ALL, properties);
 
         std::vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
+        cl::CommandQueue queue(context, devices[0], 0, &err);
 
-        cl::Program::Sources source(1, std::make_pair(emptyStr,strlen(emptyStr)));
+        // Buffers
+        int A[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+        cl::Buffer buffer_A(context, CL_MEM_READ_WRITE, sizeof(int) * 10);
+        cl::Buffer buffer_C(context, CL_MEM_READ_WRITE, sizeof(int) * 10);
+        queue.enqueueWriteBuffer(buffer_A, CL_TRUE, 0, sizeof(int) * 10, A);
+        
+        // Programs
+        cl::Program::Sources source(1, std::make_pair(addoneStr, strlen(addoneStr)));
         cl::Program program_ = cl::Program(context, source);
         program_.build(devices);
 
-        cl::Kernel kernel(program_, "empty", &err);
-
+        // Kernel
+        cl::Kernel kernel(program_, "addone", &err);
+        kernel.setArg(0, buffer_A);
+        kernel.setArg(1, buffer_C);
         cl::Event event;
-        cl::CommandQueue queue(context, devices[0], 0, &err);
-        queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(4,4), cl::NullRange, NULL, &event);
-
+        queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(10), cl::NullRange, NULL, &event);
         queue.finish();
-        // event.wait();
+
+        // Check
+        int C[10];
+        queue.enqueueReadBuffer(buffer_C, CL_TRUE, 0, sizeof(int) * 10, C);
+        std::cout << "result: " << std::endl;
+        for (int i = 0; i < 10; i++)
+            std::cout << C[i] << " ";
+        std::cout << std::endl;
     }
     catch (cl::Error err) {
         std::cerr << "ERROR: " << err.what() << "(" << err.err() << ")" << std::endl;

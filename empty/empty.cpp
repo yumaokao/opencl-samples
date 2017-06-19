@@ -17,22 +17,39 @@ namespace po = boost::program_options;
 
 int main(int argc, char *argv[])
 {
+    int pid;
+    int verbose;
     po::options_description desc(std::string (argv[0]).append(" options"));
     desc.add_options()
-        ("help", "produce help message")
-        ("platform", po::value<int>(), "platform id")
+        ("help,h", "produce help message")
+        ("verbose,v", po::value<int>(&verbose)->default_value(0), "verbose level")
+        ("platform,p", po::value<int>(&pid)->default_value(0), "platform id")
     ;
+    po::variables_map vm;
+    po::store(po::parse_command_line(argc, argv, desc), vm);
+    po::notify(vm);
+
+    if (vm.count("help")) {
+        std::cout << desc << std::endl;
+    }
+
+    if (verbose > 1)
+        std::cout << "platform id = " << pid << std::endl;
 
     cl_int err = CL_SUCCESS;
     try {
         std::vector<cl::Platform> platforms;
         cl::Platform::get(&platforms);
         if (platforms.size() == 0) {
-            std::cout << "Platform size 0\n";
+            std::cerr << "No OpenCL Platform" << std::endl;
             return -1;
         }
-        cl_context_properties properties[] = { CL_CONTEXT_PLATFORM, (cl_context_properties)(platforms[0])(), 0};
-        cl::Context context(CL_DEVICE_TYPE_GPU, properties);
+        if (pid > platforms.size() - 1) {
+            std::cerr << "Invalid Platform ID" << std::endl;
+            return -1;
+        }
+        cl_context_properties properties[] = { CL_CONTEXT_PLATFORM, (cl_context_properties)(platforms[pid])(), 0};
+        cl::Context context(CL_DEVICE_TYPE_ALL, properties);
 
         std::vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
 

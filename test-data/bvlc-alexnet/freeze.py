@@ -35,7 +35,7 @@ def convpool(net, conv, pool, chan=None):
         pretty(pool, net.blobs[pool].data, channel=c)
 
     conv2 = caffe.io.array_to_blobproto(net.blobs['conv2'].data)
-    with open('conv2.proto', 'wb') as f:
+    with open('conv2.bin', 'wb') as f:
          f.write(conv2.SerializeToString())
     # import ipdb
     # ipdb.set_trace()

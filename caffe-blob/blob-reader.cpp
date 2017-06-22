@@ -3,8 +3,10 @@
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
+#include <fstream>
 #include <string>
 #include <boost/program_options.hpp>
+#include <caffe/proto/caffe.pb.h>
 
 namespace po = boost::program_options;
 
@@ -22,6 +24,30 @@ int main(int argc, char *argv[])
 
     if (vm.count("help")) {
         std::cout << desc << std::endl;
+    }
+
+    // ifstream
+    std::ifstream *bfile = nullptr;
+    bfile = new std::ifstream("conv2.bin", std::ios::in | std::ios::binary);
+
+    // read blob
+    caffe::BlobProto blob;
+    if (bfile->is_open()) {
+        blob.ParseFromIstream(bfile);
+        if (blob.has_shape()) {
+            caffe::BlobShape shape = blob.shape();
+            std::cout << "dim_size() " << shape.dim_size() << std::endl;
+            for (int i = 0; i < shape.dim_size(); i++)
+                std::cout << "  dim[" << i << "] " << shape.dim(i) << std::endl;
+        }
+
+        std::cout << "data_size() " << blob.data_size() << std::endl;
+        const float *fdata = nullptr;
+        fdata = blob.data().data();
+
+        std::cout << "float data[0] " << fdata[7] << std::endl;
+        std::cout << "float data[0] " << fdata[8] << std::endl;
+        bfile->close();
     }
 
     return EXIT_SUCCESS;

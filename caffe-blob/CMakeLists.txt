@@ -19,9 +19,16 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 find_package(Caffe REQUIRED)
 # message(${Caffe_FOUND})
 
+## Protobuf
+find_package(Protobuf REQUIRED)
+message(${PROTOBUF_LIBRARY})
+
+
 ## blob-reader
 add_executable(blob-reader blob-reader.cpp)
-target_include_directories(blob-reader PUBLIC ${Boost_INCLUDE_DIRS} ${Caffe_INCLUDE_DIR})
-target_link_libraries(blob-reader ${Boost_LIBRARIES} ${Caffe_LIBS})
+target_include_directories(blob-reader PUBLIC ${Boost_INCLUDE_DIRS})
+target_link_libraries(blob-reader ${Boost_LIBRARIES})
+target_include_directories(blob-reader PUBLIC ${Caffe_INCLUDE_DIR} ${PROTOBUF_INCLUDE_DIR})
+target_link_libraries(blob-reader ${Caffe_LIBS} ${PROTOBUF_LIBRARY})
 
 # vim:fileencoding=UTF-8:ts=4:sw=4:sta:et:sts=4:ai

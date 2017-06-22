@@ -37,8 +37,8 @@ def convpool(net, conv, pool, chan=None):
     conv2 = caffe.io.array_to_blobproto(net.blobs['conv2'].data)
     with open('conv2.bin', 'wb') as f:
          f.write(conv2.SerializeToString())
-    # import ipdb
-    # ipdb.set_trace()
+    import ipdb
+    ipdb.set_trace()
 
 
 def main():
@@ -73,7 +73,7 @@ def main():
     '''
 
     # ## pretty print conv2, pool2
-    convpool(net, 'conv2', 'pool2', chan=1)
+    convpool(net, 'conv2', 'pool2', chan=0)
 
 
 if __name__ == "__main__":

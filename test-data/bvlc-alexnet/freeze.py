@@ -34,6 +34,12 @@ def convpool(net, conv, pool, chan=None):
         pretty(conv, net.blobs[conv].data, channel=c, stride=2, color=True)
         pretty(pool, net.blobs[pool].data, channel=c)
 
+    conv2 = caffe.io.array_to_blobproto(net.blobs['conv2'].data)
+    with open('conv2.proto', 'wb') as f:
+         f.write(conv2.SerializeToString())
+    # import ipdb
+    # ipdb.set_trace()
+
 
 def main():
     net = caffe.Net(DEPLOY_PROTOTXT_PATH, CAFFEMODEL_PATH, caffe.TEST)
@@ -68,9 +74,6 @@ def main():
 
     # ## pretty print conv2, pool2
     convpool(net, 'conv2', 'pool2', chan=1)
-
-    # import ipdb
-    # ipdb.set_trace()
 
 
 if __name__ == "__main__":

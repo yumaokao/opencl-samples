@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.0)
 project(empty)
 set(CMAKE_PROJECT_NAME empty)
 set(CMAKE_BUILD_TYPE DEBUG)

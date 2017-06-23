@@ -40,3 +40,9 @@ out
 
 # proto
 *.bin
+
+# caffemodel
+*.caffemodel
+
+# python cache
+__pycache__

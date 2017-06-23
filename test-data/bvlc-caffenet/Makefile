@@ -16,6 +16,10 @@ all:
 
 download:
 	$(call mkdir_config, models/bvlc_reference_caffnet)
-	@ python ./download_model_binary.py models/bvlc_reference_caffnet
+	@ python ./download_model_binary.py models/bvlc_reference_caffenet
+	@ ./ilsvrc12/get_ilsvrc_aux.sh
+
+unittest:
+	@ python -m unittest discover -s tests
 
 #### not used now targets ####

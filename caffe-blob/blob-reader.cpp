@@ -48,8 +48,8 @@ int main(int argc, char *argv[])
         // for conv2.bin transposed to NHWC, padded to 8 elements
         //   nhwc(0, 3, 5, 1) = 24.6118
         //   nhwc(0, 0, 7, 0) = 37.1379
-        std::cout << "float data(0, 3, 5, 1) " << fdata[(1) + 5 * (256) + 3 * (256 * 32)] << std::endl;
-        std::cout << "float data(0, 0, 7, 0) " << fdata[(0) + 7 * (256) + 0 * (256 * 32)] << std::endl;
+        std::cout << "float data(0, 3, 5, 1) " << fdata[(1) + (5) * 256 + (3) * 256 * 32] << std::endl;
+        std::cout << "float data(0, 0, 7, 0) " << fdata[(0) + (7) * 256 + (0) * 256 * 32] << std::endl;
         bfile->close();
     }
 

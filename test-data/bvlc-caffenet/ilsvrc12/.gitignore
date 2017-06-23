@@ -2,3 +2,4 @@
 *.txt
 *.pickle
 *.binaryproto
+*.npy

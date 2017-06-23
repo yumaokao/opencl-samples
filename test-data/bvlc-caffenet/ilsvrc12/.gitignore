@@ -1,0 +1,4 @@
+# ilsvrc12
+*.txt
+*.pickle
+*.binaryproto

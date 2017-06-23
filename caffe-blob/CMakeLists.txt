@@ -40,9 +40,12 @@ target_include_directories(max-pool PUBLIC ${Boost_INCLUDE_DIRS})
 target_link_libraries(max-pool ${Boost_LIBRARIES})
 target_include_directories(max-pool PUBLIC ${Caffe_INCLUDE_DIR} ${PROTOBUF_INCLUDE_DIR})
 target_link_libraries(max-pool ${Caffe_LIBS} ${PROTOBUF_LIBRARY})
+target_include_directories(max-pool PUBLIC ${OpenCL_INCLUDE_DIRS})
+target_link_libraries(max-pool ${OpenCL_LIBRARIES})
 
 ## conv2-pool2
 add_custom_target(conv2-pool2
+    DEPENDS max-pool
     COMMAND [ -f ./conv2.bin ] || cp -f ../../test-data/bvlc-caffenet/conv2.bin ./
     COMMAND ./max-pool)
 

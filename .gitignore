@@ -46,3 +46,6 @@ out
 
 # python cache
 __pycache__
+
+# dot image
+*.png

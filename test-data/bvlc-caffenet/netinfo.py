@@ -61,67 +61,37 @@ def get_pooling_types_dict():
 
 
 def get_layer_label(layer, rankdir):
-    """Define node label based on layer type.
-
-    Parameters
-    ----------
-    layer : ?
-    rankdir : {'LR', 'TB', 'BT'}
-        Direction of graph layout.
-
-    Returns
-    -------
-    string :
-        A label for the current layer
-    """
-
-    if rankdir in ('TB', 'BT'):
-        # If graph orientation is vertical, horizontal space is free and
-        # vertical space is not; separate words with spaces
-        separator = ' '
-    else:
-        # If graph orientation is horizontal, vertical space is free and
-        # horizontal space is not; separate words with newlines
-        separator = '\\n'
+    separator = ' ' if rankdir in ('TB', 'BT') else '\\n'
 
     if layer.type == 'Convolution' or layer.type == 'Deconvolution':
-        # Outer double quotes needed or else colon characters don't parse
-        # properly
-        node_label = '"%s%s(%s)%skernel size: %d%sstride: %d%spad: %d"' %\
-                     (layer.name,
-                      separator,
-                      layer.type,
-                      separator,
-                      layer.convolution_param.kernel_size[0] if len(layer.convolution_param.kernel_size) else 1,
-                      separator,
-                      layer.convolution_param.stride[0] if len(layer.convolution_param.stride) else 1,
-                      separator,
-                      layer.convolution_param.pad[0] if len(layer.convolution_param.pad) else 0)
+        param = layer.convolution_param
+        label = '"{name}{s}[{type}]{s}{kernel}x{kernel}_{stride}(S){s}pad {pad}"'
+        node_label = label.format(name=layer.name, type=layer.type, s=separator,
+                                  kernel=param.kernel_size[0] if len(param.kernel_size) else 1,
+                                  stride=param.stride[0] if len(param.stride) else 1,
+                                  pad=param.pad[0] if len(param.pad) else 0)
     elif layer.type == 'Pooling':
         pooling_types_dict = get_pooling_types_dict()
-        node_label = '"%s%s(%s %s)%skernel size: %d%sstride: %d%spad: %d"' %\
-                     (layer.name,
-                      separator,
-                      pooling_types_dict[layer.pooling_param.pool],
-                      layer.type,
-                      separator,
-                      layer.pooling_param.kernel_size,
-                      separator,
-                      layer.pooling_param.stride,
-                      separator,
-                      layer.pooling_param.pad)
+        param = layer.pooling_param
+        label = '"{name}{s}[{type}]{s}{pool}{s}{kernel}x{kernel}_{stride}(S){s}pad {pad}"'
+        node_label = label.format(name=layer.name, type=layer.type, s=separator,
+                                  pool=pooling_types_dict[layer.pooling_param.pool],
+                                  kernel=param.kernel_size,
+                                  stride=param.stride,
+                                  pad=param.pad)
     else:
-        node_label = '"%s%s(%s)"' % (layer.name, separator, layer.type)
+        label = '"{name}{s}[{type}]"'
+        node_label = label.format(name=layer.name, type=layer.type, s=separator)
     return node_label
 
 
-def get_pydot_graph(caffe_net, rankdir, label_edges=True, phase=None):
-    pydot_graph = pydot.Dot(caffe_net.name if caffe_net.name else 'Net',
+def get_pydot_graph(net, netpara, rankdir, label_edges=True, phase=None):
+    pydot_graph = pydot.Dot(netpara.name if netpara.name else 'Net',
                             graph_type='digraph',
                             rankdir=rankdir)
     pydot_nodes = {}
     pydot_edges = []
-    for layer in caffe_net.layer:
+    for layer in netpara.layer:
         if phase is not None:
             included = False
             if len(layer.include) == 0:
@@ -148,18 +118,12 @@ def get_pydot_graph(caffe_net, rankdir, label_edges=True, phase=None):
         for bottom_blob in layer.bottom:
             pydot_nodes[bottom_blob + '_blob'] = pydot.Node('%s' % bottom_blob, **BLOB_STYLE)
             edge_label = '""'
-            pydot_edges.append({'src': bottom_blob + '_blob',
-                                'dst': node_name,
-                                'label': edge_label})
+            pydot_edges.append({'src': bottom_blob + '_blob', 'dst': node_name, 'label': edge_label})
         for top_blob in layer.top:
             pydot_nodes[top_blob + '_blob'] = pydot.Node('%s' % (top_blob))
-            if label_edges:
-                edge_label = get_edge_label(layer)
-            else:
-                edge_label = '""'
-            pydot_edges.append({'src': node_name,
-                                'dst': top_blob + '_blob',
-                                'label': edge_label})
+            edge_label = get_edge_label(layer) if label_edges else '""'
+            pydot_edges.append({'src': node_name, 'dst': top_blob + '_blob', 'label': edge_label})
+
     # Now, add the nodes and edges to the graph.
     for node in pydot_nodes.values():
         pydot_graph.add_node(node)
@@ -174,7 +138,7 @@ def main():
     text_format.Merge(open(DEPLOY_PROTOTXT_PATH).read(), netpara)
     net = caffe.Net(DEPLOY_PROTOTXT_PATH, caffe.TEST)
 
-    graph = get_pydot_graph(netpara, 'LR', phase=caffe_pb2.Phase.Value('TEST'))
+    graph = get_pydot_graph(net, netpara, 'LR', phase=caffe_pb2.Phase.Value('TEST'))
     with open('result.png', 'wb') as fp:
         fp.write(graph.create(format='png'))
     # import ipdb

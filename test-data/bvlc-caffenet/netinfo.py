@@ -85,6 +85,21 @@ def get_layer_label(layer, rankdir):
     return node_label
 
 
+def get_blob_label(blobname, net, rankdir):
+    separator = ' ' if rankdir in ('TB', 'BT') else '\\n'
+
+    if blobname not in net.blobs:
+        raise ValueError('Blob ' + blobname + ' not in caffe net')
+
+    blob = net.blobs[blobname]
+
+    label = '"{name}{s}{shape}{s}={size}"'
+    dims = [str(s) for s in blob.data.shape]
+    shape = ','.join(dims)
+    blob_label = label.format(name=blobname, shape=shape, s=separator, size=blob.data.size)
+    return blob_label
+
+
 def get_pydot_graph(net, netpara, rankdir, label_edges=True, phase=None):
     pydot_graph = pydot.Dot(netpara.name if netpara.name else 'Net',
                             graph_type='digraph',
@@ -116,11 +131,11 @@ def get_pydot_graph(net, netpara, rankdir, label_edges=True, phase=None):
             pydot_nodes[node_name] = pydot.Node(node_label, **layer_style)
 
         for bottom_blob in layer.bottom:
-            pydot_nodes[bottom_blob + '_blob'] = pydot.Node('%s' % bottom_blob, **BLOB_STYLE)
+            pydot_nodes[bottom_blob + '_blob'] = pydot.Node(get_blob_label(bottom_blob, net, rankdir), **BLOB_STYLE)
             edge_label = '""'
             pydot_edges.append({'src': bottom_blob + '_blob', 'dst': node_name, 'label': edge_label})
         for top_blob in layer.top:
-            pydot_nodes[top_blob + '_blob'] = pydot.Node('%s' % (top_blob))
+            pydot_nodes[top_blob + '_blob'] = pydot.Node(get_blob_label(top_blob, net, rankdir))
             edge_label = get_edge_label(layer) if label_edges else '""'
             pydot_edges.append({'src': node_name, 'dst': top_blob + '_blob', 'label': edge_label})
 
@@ -138,9 +153,14 @@ def main():
     text_format.Merge(open(DEPLOY_PROTOTXT_PATH).read(), netpara)
     net = caffe.Net(DEPLOY_PROTOTXT_PATH, caffe.TEST)
 
+    # batch is 8
+    net.blobs['data'].reshape(8,3,227,227)
+    net.reshape()
+
     graph = get_pydot_graph(net, netpara, 'LR', phase=caffe_pb2.Phase.Value('TEST'))
     with open('result.png', 'wb') as fp:
         fp.write(graph.create(format='png'))
+
     # import ipdb
     # ipdb.set_trace()
 

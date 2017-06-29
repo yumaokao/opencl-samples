@@ -3,28 +3,22 @@ import caffe
 from caffe.proto import caffe_pb2
 from google.protobuf import text_format
 
+import argparse
 import numpy as np
 import pydotplus as pydot
 
 
 # Internal layer and blob styles.
-LAYER_STYLE_DEFAULT = {'shape': 'record',
-                       'fillcolor': '#6495ED',
-                       'style': 'filled'}
-NEURON_LAYER_STYLE = {'shape': 'record',
-                      'fillcolor': '#90EE90',
-                      'style': 'filled'}
-BLOB_STYLE = {'shape': 'octagon',
-              'fillcolor': '#E0E0E0',
-              'style': 'filled'}
+LAYER_STYLE_DEFAULT = {'shape': 'record', 'fillcolor': '#6495ED', 'style': 'filled'}
+NEURON_LAYER_STYLE = {'shape': 'record', 'fillcolor': '#90EE90', 'style': 'filled'}
+BLOB_STYLE = {'shape': 'octagon', 'fillcolor': '#E0E0E0', 'style': 'filled'}
 
+VERSION = '0.3.0'
 CAFFE_BASE = '/home/yumaokao/hubs/caffe'
 DEPLOY_PROTOTXT_PATH = CAFFE_BASE + '/models/bvlc_reference_caffenet/deploy.prototxt'
 
 
 def choose_color_by_layertype(layertype):
-    """Define colors for nodes based on the layer type.
-    """
     color = '#6495ED'  # Default
     if layertype == 'Convolution' or layertype == 'Deconvolution':
         color = '#FF5050'
@@ -36,8 +30,6 @@ def choose_color_by_layertype(layertype):
 
 
 def get_edge_label(layer):
-    """Define edge label based on layer type.
-    """
     if layer.type == 'Data':
         edge_label = 'Batch ' + str(layer.data_param.batch_size)
     elif layer.type == 'Convolution' or layer.type == 'Deconvolution':
@@ -51,8 +43,6 @@ def get_edge_label(layer):
 
 
 def get_pooling_types_dict():
-    """Get dictionary mapping pooling type number to type name
-    """
     desc = caffe_pb2.PoolingParameter.PoolMethod.DESCRIPTOR
     d = {}
     for k, v in desc.values_by_name.items():
@@ -150,17 +140,30 @@ def get_pydot_graph(net, netpara, rankdir, label_edges=True, phase=None):
 
 
 def main():
-    netpara = caffe_pb2.NetParameter()
-    text_format.Merge(open(DEPLOY_PROTOTXT_PATH).read(), netpara)
-    net = caffe.Net(DEPLOY_PROTOTXT_PATH, caffe.TEST)
+    parser = argparse.ArgumentParser(description='hamiorg')
+    parser.add_argument('-v', '--verbose', help='show more debug information', action='count', default=0)
+    parser.add_argument('-V', '--version', action='version', version=VERSION, help='show version infomation')
+    parser.add_argument('-n', '--batch_size', default=8, help='batch size')
+    parser.add_argument('-p', '--plot', action='store_true', help='plot the network')
+    parser.add_argument('-P', '--pooling', action='store_true', help='calculate pooling layers')
+    parser.add_argument('deploy', help='deploy.prototxt for the caffe model')
+    args = parser.parse_args()
 
-    # batch is 8
-    net.blobs['data'].reshape(8,3,227,227)
+    netpara = caffe_pb2.NetParameter()
+    text_format.Merge(open(args.deploy).read(), netpara)
+    net = caffe.Net(args.deploy, caffe.TEST)
+
+    # reshape for batch size
+    net.blobs['data'].reshape(args.batch_size, 3, 227, 227)
     net.reshape()
 
-    graph = get_pydot_graph(net, netpara, 'LR', phase=caffe_pb2.Phase.Value('TEST'))
-    with open('result.png', 'wb') as fp:
-        fp.write(graph.create(format='png'))
+    if args.plot:
+        graph = get_pydot_graph(net, netpara, 'LR', phase=caffe_pb2.Phase.Value('TEST'))
+        with open('result.png', 'wb') as fp:
+            fp.write(graph.create(format='png'))
+
+    if args.pooling:
+        print('YMK')
 
     # import ipdb
     # ipdb.set_trace()

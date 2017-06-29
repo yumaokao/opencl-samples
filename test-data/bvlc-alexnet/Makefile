@@ -16,7 +16,7 @@ all:
 
 download:
 	$(call mkdir_config, models/bvlc_alexnet)
-	@ python ../download_model_binary.py models/bvlc_alexnet
+	@ python ../tools/download_model_binary.py models/bvlc_alexnet
 
 unittest:
 	@ python -m unittest discover -s tests

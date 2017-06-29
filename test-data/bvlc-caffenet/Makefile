@@ -16,7 +16,7 @@ all:
 
 download:
 	$(call mkdir_config, models/bvlc_reference_caffnet)
-	@ python ../download_model_binary.py models/bvlc_reference_caffenet
+	@ python ../tools/download_model_binary.py models/bvlc_reference_caffenet
 	@ ./ilsvrc12/get_ilsvrc_aux.sh
 	@ cd ./ilsvrc12 && wget https://github.com/BVLC/caffe/raw/master/python/caffe/imagenet/ilsvrc_2012_mean.npy
 

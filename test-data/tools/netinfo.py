@@ -139,11 +139,50 @@ def get_pydot_graph(net, netpara, rankdir, label_edges=True, phase=None):
     return pydot_graph
 
 
+def pooling_info(layer, net):
+    # parameters
+    clusters = 1
+    cu_groups_per_cluster = 4
+
+    print(layer.name)
+
+    param = layer.pooling_param
+    kernel_size = param.kernel_size
+    cycles_uint8_in_16b = 2 # TODO: 2 if param.pool == 'MAX' else 1
+    cus = clusters * cu_groups_per_cluster
+
+    pixels = sum(map(lambda b: net.blobs[b].data.size, layer.top))
+
+    # ideal computation cycles
+    ideal_cycles = (pixels * kernel_size * kernel_size // (128 * cus))
+
+    # estimated computation cycles needed
+    alu_cycles = (pixels * kernel_size * kernel_size * cycles_uint8_in_16b // (128 * cus)) + 60
+
+    # estimated load store cycles needed
+    store_pixels = pixels
+    load_pixels = pixels * kernel_size * kernel_size
+    load_store_cycles = (load_pixels + store_pixels) * cycles_uint8_in_16b * 1.1 // (128 * cus)
+
+    # estimated cycles
+    estimated_cycles = max(load_store_cycles, alu_cycles)
+
+    # estimated_util
+    estimated_util = ideal_cycles / estimated_cycles
+
+    print('ideal cycles: {}'.format(ideal_cycles))
+    print('alu_cycles: {}'.format(alu_cycles))
+    print('load_store_cycles: {}'.format(load_store_cycles))
+    print('estimated_cycles: {}'.format(estimated_cycles))
+    print('estimated_util: {}'.format(estimated_util))
+    print()
+
+
 def main():
     parser = argparse.ArgumentParser(description='hamiorg')
     parser.add_argument('-v', '--verbose', help='show more debug information', action='count', default=0)
     parser.add_argument('-V', '--version', action='version', version=VERSION, help='show version infomation')
-    parser.add_argument('-n', '--batch_size', default=8, help='batch size')
+    parser.add_argument('-n', '--batch_size', default=1, help='batch size')
     parser.add_argument('-p', '--plot', action='store_true', help='plot the network')
     parser.add_argument('-P', '--pooling', action='store_true', help='calculate pooling layers')
     parser.add_argument('deploy', help='deploy.prototxt for the caffe model')
@@ -163,7 +202,12 @@ def main():
             fp.write(graph.create(format='png'))
 
     if args.pooling:
-        print('YMK')
+        print()
+        print('Show Pooling Layer Infomation')
+        for layer in netpara.layer:
+            if layer.type == 'Pooling':
+                pooling_info(layer, net)
+
 
     # import ipdb
     # ipdb.set_trace()

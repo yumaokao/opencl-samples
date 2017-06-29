@@ -93,10 +93,11 @@ def get_blob_label(blobname, net, rankdir):
 
     blob = net.blobs[blobname]
 
-    label = '"{name}{s}{shape}{s}={size}"'
+    label = '"{name}{s}{shape}{s}= {size}{s}= {sizeM:.2f} M"'
     dims = [str(s) for s in blob.data.shape]
     shape = ','.join(dims)
-    blob_label = label.format(name=blobname, shape=shape, s=separator, size=blob.data.size)
+    blob_label = label.format(name=blobname, shape=shape, s=separator,
+                              size=blob.data.size, sizeM=blob.data.size / (1024 * 1024))
     return blob_label
 
 

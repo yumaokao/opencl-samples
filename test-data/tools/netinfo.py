@@ -143,6 +143,8 @@ def pooling_info(layer, net):
     # parameters
     clusters = 1
     cu_groups_per_cluster = 4
+    gsm_size = 1 * 1024 * 1024
+    bus_util = 0.8
 
     print(layer.name)
 
@@ -154,7 +156,7 @@ def pooling_info(layer, net):
     pixels = sum(map(lambda b: net.blobs[b].data.size, layer.top))
 
     # ideal computation cycles
-    ideal_cycles = (pixels * kernel_size * kernel_size // (128 * cus))
+    ideal_cycles = pixels * kernel_size * kernel_size // (128 * cus)
 
     # estimated computation cycles needed
     alu_cycles = (pixels * kernel_size * kernel_size * cycles_uint8_in_16b // (128 * cus)) + 60
@@ -164,25 +166,55 @@ def pooling_info(layer, net):
     load_pixels = pixels * kernel_size * kernel_size
     load_store_cycles = (load_pixels + store_pixels) * cycles_uint8_in_16b * 1.1 // (128 * cus)
 
+    # dram_gsm_cycles
+    src_pixels = sum(map(lambda b: net.blobs[b].data.size, layer.bottom))
+    if src_pixels < 0.5 * gsm_size:
+        dram_gsm_cycles = 0
+    else:
+        dram_gsm_cycles = (src_pixels + pixels) * 1.05 // (16 * clusters * bus_util)
+
     # estimated cycles
-    estimated_cycles = max(load_store_cycles, alu_cycles)
+    estimated_cycles = max(load_store_cycles, alu_cycles, dram_gsm_cycles)
 
     # estimated_util
     estimated_util = ideal_cycles / estimated_cycles
 
     print('ideal cycles: {}'.format(ideal_cycles))
-    print('alu_cycles: {}'.format(alu_cycles))
-    print('load_store_cycles: {}'.format(load_store_cycles))
+    print('  alu_cycles: {}'.format(alu_cycles))
+    print('  load_store_cycles: {}'.format(load_store_cycles))
+    print('  dram_gsm_cycles: {}'.format(dram_gsm_cycles))
     print('estimated_cycles: {}'.format(estimated_cycles))
-    print('estimated_util: {}'.format(estimated_util))
+    print('estimated_util: {:.2%}'.format(estimated_util))
     print()
+
+    return ideal_cycles, estimated_cycles
+
+
+class Utilization():
+    def __init__(self, name='Layer'):
+        self.name = name
+        self.total_ideal = 0.0
+        self.total_estimated = 0.0
+
+    def add(self, ideal, estimated):
+        self.total_ideal += ideal
+        self.total_estimated += estimated
+
+    def util(self):
+        return self.total_ideal / self.total_estimated
+
+    def info(self):
+        print('Utilization: {}'.format(self.name))
+        print('  ideal cycles: {}'.format(self.total_ideal))
+        print('  estimated cycles: {}'.format(self.total_estimated))
+        print('  estimated util: {:.2%}'.format(self.util()))
 
 
 def main():
     parser = argparse.ArgumentParser(description='hamiorg')
     parser.add_argument('-v', '--verbose', help='show more debug information', action='count', default=0)
     parser.add_argument('-V', '--version', action='version', version=VERSION, help='show version infomation')
-    parser.add_argument('-n', '--batch_size', default=1, help='batch size')
+    parser.add_argument('-n', '--batch_size', type=int, default=1, help='batch size')
     parser.add_argument('-p', '--plot', action='store_true', help='plot the network')
     parser.add_argument('-P', '--pooling', action='store_true', help='calculate pooling layers')
     parser.add_argument('deploy', help='deploy.prototxt for the caffe model')
@@ -204,9 +236,11 @@ def main():
     if args.pooling:
         print()
         print('Show Pooling Layer Infomation')
+        util = Utilization(name='Pooling')
         for layer in netpara.layer:
             if layer.type == 'Pooling':
-                pooling_info(layer, net)
+                util.add(*pooling_info(layer, net))
+        util.info()
 
 
     # import ipdb

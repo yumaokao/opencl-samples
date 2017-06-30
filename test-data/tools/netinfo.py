@@ -182,6 +182,8 @@ def pooling_info(layer, net):
     print('ideal cycles: {}'.format(ideal_cycles))
     print('  alu_cycles: {}'.format(alu_cycles))
     print('  load_store_cycles: {}'.format(load_store_cycles))
+    print('  pixels: {}'.format(pixels))
+    print('  src_pixels: {}'.format(src_pixels))
     print('  dram_gsm_cycles: {}'.format(dram_gsm_cycles))
     print('estimated_cycles: {}'.format(estimated_cycles))
     print('estimated_util: {:.2%}'.format(estimated_util))

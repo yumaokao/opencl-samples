@@ -139,14 +139,15 @@ def get_pydot_graph(net, netpara, rankdir, label_edges=True, phase=None):
     return pydot_graph
 
 
-def pooling_info(layer, net):
+def pooling_info(args, layer, net):
     # parameters
     clusters = 1
     cu_groups_per_cluster = 4
     gsm_size = 1 * 1024 * 1024
     bus_util = 0.8
 
-    print(layer.name)
+    if args.verbose > 0:
+        print(layer.name)
 
     param = layer.pooling_param
     kernel_size = param.kernel_size
@@ -179,15 +180,70 @@ def pooling_info(layer, net):
     # estimated_util
     estimated_util = ideal_cycles / estimated_cycles
 
-    print('ideal cycles: {}'.format(ideal_cycles))
-    print('  alu_cycles: {}'.format(alu_cycles))
-    print('  load_store_cycles: {}'.format(load_store_cycles))
-    print('  pixels: {}'.format(pixels))
-    print('  src_pixels: {}'.format(src_pixels))
-    print('  dram_gsm_cycles: {}'.format(dram_gsm_cycles))
-    print('estimated_cycles: {}'.format(estimated_cycles))
-    print('estimated_util: {:.2%}'.format(estimated_util))
-    print()
+    if args.verbose > 0:
+        print('ideal cycles: {}'.format(ideal_cycles))
+        print('  alu_cycles: {}'.format(alu_cycles))
+        print('  load_store_cycles: {}'.format(load_store_cycles))
+        print('  pixels: {}'.format(pixels))
+        print('  src_pixels: {}'.format(src_pixels))
+        print('  dram_gsm_cycles: {}'.format(dram_gsm_cycles))
+        print('estimated_cycles: {}'.format(estimated_cycles))
+        print('estimated_util: {:.2%}'.format(estimated_util))
+        print()
+
+    return ideal_cycles, estimated_cycles
+
+
+def lrn_info(args, layer, net):
+    # parameters
+    clusters = 1
+    cu_groups_per_cluster = 4
+    gsm_size = 1 * 1024 * 1024
+    bus_util = 0.8
+
+    if args.verbose > 0:
+        print(layer.name)
+
+    param = layer.lrn_param
+    local_size = param.local_size
+    cus = clusters * cu_groups_per_cluster
+
+    pixels = sum(map(lambda b: net.blobs[b].data.size, layer.top))
+
+    # ideal computation cycles
+    ideal_cycles = pixels * (local_size * 2 + 2 + 12 + 12) // (128 * cus)
+
+    # estimated computation cycles needed
+    alu_cycles = pixels * (local_size * 2 + 2 + 12 + 12) // (128 * cus)
+
+    # estimated load store cycles needed
+    store_pixels = pixels
+    load_pixels = pixels * local_size
+    load_store_cycles = (load_pixels + store_pixels) * 1.1 // (128 * cus)
+
+    # dram_gsm_cycles
+    src_pixels = sum(map(lambda b: net.blobs[b].data.size, layer.bottom))
+    if src_pixels < 0.5 * gsm_size:
+        dram_gsm_cycles = 0
+    else:
+        dram_gsm_cycles = (src_pixels + pixels) * 1.05 // (16 * clusters * bus_util)
+
+    # estimated cycles
+    estimated_cycles = max(load_store_cycles, alu_cycles, dram_gsm_cycles)
+
+    # estimated_util
+    estimated_util = ideal_cycles / estimated_cycles
+
+    if args.verbose > 0:
+        print('ideal cycles: {}'.format(ideal_cycles))
+        print('  alu_cycles: {}'.format(alu_cycles))
+        print('  load_store_cycles: {}'.format(load_store_cycles))
+        print('  pixels: {}'.format(pixels))
+        print('  src_pixels: {}'.format(src_pixels))
+        print('  dram_gsm_cycles: {}'.format(dram_gsm_cycles))
+        print('estimated_cycles: {}'.format(estimated_cycles))
+        print('estimated_util: {:.2%}'.format(estimated_util))
+        print()
 
     return ideal_cycles, estimated_cycles
 
@@ -196,7 +252,7 @@ class Utilization():
     def __init__(self, name='Layer'):
         self.name = name
         self.total_ideal = 0.0
-        self.total_estimated = 0.0
+        self.total_estimated = 1.0
 
     def add(self, ideal, estimated):
         self.total_ideal += ideal
@@ -219,6 +275,7 @@ def main():
     parser.add_argument('-n', '--batch_size', type=int, default=1, help='batch size')
     parser.add_argument('-p', '--plot', action='store_true', help='plot the network')
     parser.add_argument('-P', '--pooling', action='store_true', help='calculate pooling layers')
+    parser.add_argument('-L', '--lrn', action='store_true', help='calculate LRN layers')
     parser.add_argument('deploy', help='deploy.prototxt for the caffe model')
     args = parser.parse_args()
 
@@ -241,9 +298,17 @@ def main():
         util = Utilization(name='Pooling')
         for layer in netpara.layer:
             if layer.type == 'Pooling':
-                util.add(*pooling_info(layer, net))
+                util.add(*pooling_info(args, layer, net))
         util.info()
 
+    if args.lrn:
+        print()
+        print('Show LRN Layer Infomation')
+        util = Utilization(name='LRN')
+        for layer in netpara.layer:
+            if layer.type == 'LRN':
+                util.add(*lrn_info(args, layer, net))
+        util.info()
 
     # import ipdb
     # ipdb.set_trace()

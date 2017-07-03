@@ -115,7 +115,8 @@ def get_pydot_graph(net, netpara, rankdir, label_edges=True, phase=None):
         node_name = "%s_%s" % (layer.name, layer.type)
         if (len(layer.bottom) == 1 and len(layer.top) == 1 and layer.bottom[0] == layer.top[0]):
             # We have an in-place neuron layer.
-            pydot_nodes[node_name] = pydot.Node(node_label, **NEURON_LAYER_STYLE)
+            # pydot_nodes[node_name] = pydot.Node(node_label, **NEURON_LAYER_STYLE)
+            continue
         else:
             layer_style = LAYER_STYLE_DEFAULT
             layer_style['fillcolor'] = choose_color_by_layertype(layer.type)
